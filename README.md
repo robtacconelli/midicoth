@@ -14,11 +14,11 @@ Midicoth is a lossless text compressor that introduces *micro-diffusion* — a m
 
 ### alice29.txt — 152 KB (Canterbury Corpus)
 
-![alice29.txt compression comparison](chart_alice29.png)
+![alice29.txt compression comparison](charts/chart_alice29.png)
 
 ### enwik8 — 100 MB (Large Text Compression Benchmark)
 
-![enwik8 compression comparison](chart_enwik8.png)
+![enwik8 compression comparison](charts/chart_enwik8.png)
 
 | Benchmark | MDC | xz -9 | Improvement |
 |-----------|-----|--------|-------------|
@@ -68,13 +68,13 @@ PPM models smooth their predictions with a Jeffreys prior (0.5 per symbol, 128 t
 
 ### Ablation: Component Contributions
 
-![Ablation study](chart_ablation.png)
+![Ablation study](charts/chart_ablation.png)
 
 The Tweedie denoiser alone accounts for **31–44%** of the total compression improvement — the single most impactful component. The full pipeline achieves **40–57%** improvement over base PPM across all datasets.
 
 ### Empirical Validation of the Diffusion Interpretation
 
-![Delta vs noise level](chart_delta_vs_noise.png)
+![Delta vs noise level](charts/chart_delta_vs_noise.png)
 
 The correction magnitude |δ̂| scales monotonically with the noise level γ, consistent with Tweedie's formula: high noise (small observation count) requires large corrections; low noise requires small corrections. This pattern is consistent across different files and genres.
 
