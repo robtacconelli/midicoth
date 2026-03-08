@@ -216,8 +216,6 @@ The full technical details, theoretical framework, and comprehensive experimenta
 
 > **Micro-Diffusion Compression: Binary Tree Tweedie Denoising for Online Probability Estimation**
 > Roberto Tacconelli, 2025
->
-> [PDF](Micro_Diffusion_Compression_-_Adaptive_Temperature_Scaling_for_Online_Probability_Estimation.pdf) | [LaTeX source](Micro_Diffusion_Compression_-_Adaptive_Temperature_Scaling_for_Online_Probability_Estimation.tex)
 
 Key references:
 - Efron, B. (2011). *Tweedie's formula and selection bias.* JASA, 106(496):1602–1614. [doi:10.1198/jasa.2011.tm11181](https://doi.org/10.1198/jasa.2011.tm11181)
