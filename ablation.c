@@ -69,7 +69,11 @@ static uint8_t *do_compress(const uint8_t *data, size_t data_len,
     WordModel word;     if (flags & FLAG_WORD) word_init(&word);
     HighCtxModel hctx;  if (flags & FLAG_HIGHCTX) highctx_init(&hctx);
     ArithEncoder enc;   ae_init(&enc);
-    TweedieDenoiser twd; if (flags & FLAG_TWEEDIE) tweedie_init(&twd);
+    TweedieDenoiser *twd = NULL;
+    if (flags & FLAG_TWEEDIE) {
+        twd = (TweedieDenoiser *)malloc(sizeof(TweedieDenoiser));
+        tweedie_init(twd);
+    }
 
     double probs[256], word_probs[256], hctx_probs[256];
     int64_t cumfreqs[257];
@@ -106,7 +110,7 @@ static uint8_t *do_compress(const uint8_t *data, size_t data_len,
         }
 
         if (flags & FLAG_TWEEDIE) {
-            tweedie_denoise(&twd, probs, order, confidence);
+            tweedie_denoise(twd, probs, order, confidence);
             clamp_normalize(probs);
         }
 
@@ -115,7 +119,7 @@ static uint8_t *do_compress(const uint8_t *data, size_t data_len,
 
         /* Updates */
         if (flags & FLAG_TWEEDIE)
-            tweedie_update(&twd, byte);
+            tweedie_update(twd, byte);
         if (flags & FLAG_MATCH)
             match_update(&match, byte);
         if (flags & FLAG_WORD)
@@ -150,6 +154,7 @@ static uint8_t *do_compress(const uint8_t *data, size_t data_len,
     if (flags & FLAG_MATCH) match_free(&match);
     if (flags & FLAG_WORD) word_free(&word);
     if (flags & FLAG_HIGHCTX) highctx_free(&hctx);
+    free(twd);
 
     return result;
 }
@@ -164,7 +169,11 @@ static uint8_t *do_decompress(const uint8_t *compressed, size_t comp_len,
     WordModel word;     if (flags & FLAG_WORD) word_init(&word);
     HighCtxModel hctx;  if (flags & FLAG_HIGHCTX) highctx_init(&hctx);
     ArithDecoder dec;   ad_init(&dec, compressed, comp_len);
-    TweedieDenoiser twd; if (flags & FLAG_TWEEDIE) tweedie_init(&twd);
+    TweedieDenoiser *twd = NULL;
+    if (flags & FLAG_TWEEDIE) {
+        twd = (TweedieDenoiser *)malloc(sizeof(TweedieDenoiser));
+        tweedie_init(twd);
+    }
 
     uint8_t *result = (uint8_t *)malloc(original_size);
 
@@ -202,7 +211,7 @@ static uint8_t *do_decompress(const uint8_t *compressed, size_t comp_len,
         }
 
         if (flags & FLAG_TWEEDIE) {
-            tweedie_denoise(&twd, probs, order, confidence);
+            tweedie_denoise(twd, probs, order, confidence);
             clamp_normalize(probs);
         }
 
@@ -211,7 +220,7 @@ static uint8_t *do_decompress(const uint8_t *compressed, size_t comp_len,
         result[i] = (uint8_t)sym;
 
         if (flags & FLAG_TWEEDIE)
-            tweedie_update(&twd, (uint8_t)sym);
+            tweedie_update(twd, (uint8_t)sym);
         if (flags & FLAG_MATCH)
             match_update(&match, (uint8_t)sym);
         if (flags & FLAG_WORD)
@@ -227,6 +236,7 @@ static uint8_t *do_decompress(const uint8_t *compressed, size_t comp_len,
     if (flags & FLAG_MATCH) match_free(&match);
     if (flags & FLAG_WORD) word_free(&word);
     if (flags & FLAG_HIGHCTX) highctx_free(&hctx);
+    free(twd);
 
     return result;
 }

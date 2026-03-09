@@ -81,7 +81,8 @@ static int do_compress(const char *input_path, const char *output_path) {
     WordModel word;   word_init(&word);
     HighCtxModel hctx; highctx_init(&hctx);
     ArithEncoder enc; ae_init(&enc);
-    TweedieDenoiser twd; tweedie_init(&twd);
+    TweedieDenoiser *twd = (TweedieDenoiser *)malloc(sizeof(TweedieDenoiser));
+    tweedie_init(twd);
 
     double probs[256], word_probs[256], hctx_probs[256];
     int64_t cumfreqs[257];
@@ -111,13 +112,13 @@ static int do_compress(const char *input_path, const char *output_path) {
         if (highctx_predict(&hctx, hctx_probs, &hctx_conf))
             blend_highctx(probs, hctx_probs, hctx_conf);
 
-        tweedie_denoise(&twd, probs, order, confidence);
+        tweedie_denoise(twd, probs, order, confidence);
         clamp_normalize(probs);
 
         probs_to_cumfreqs(probs, cumfreqs, &total);
         ae_encode(&enc, cumfreqs, byte, total);
 
-        tweedie_update(&twd, byte);
+        tweedie_update(twd, byte);
         match_update(&match, byte);
         word_update(&word, byte);
         highctx_update(&hctx, byte);
@@ -157,6 +158,7 @@ static int do_compress(const char *input_path, const char *output_path) {
     match_free(&match);
     word_free(&word);
     highctx_free(&hctx);
+    free(twd);
     free(data);
     return 0;
 }
@@ -205,7 +207,8 @@ static int do_decompress(const char *input_path, const char *output_path) {
     WordModel word;   word_init(&word);
     HighCtxModel hctx; highctx_init(&hctx);
     ArithDecoder dec; ad_init(&dec, compressed, comp_len);
-    TweedieDenoiser twd; tweedie_init(&twd);
+    TweedieDenoiser *twd = (TweedieDenoiser *)malloc(sizeof(TweedieDenoiser));
+    tweedie_init(twd);
 
     uint8_t *result = (uint8_t *)malloc(original_size);
 
@@ -235,14 +238,14 @@ static int do_decompress(const char *input_path, const char *output_path) {
         if (highctx_predict(&hctx, hctx_probs, &hctx_conf))
             blend_highctx(probs, hctx_probs, hctx_conf);
 
-        tweedie_denoise(&twd, probs, order, confidence);
+        tweedie_denoise(twd, probs, order, confidence);
         clamp_normalize(probs);
 
         probs_to_cumfreqs(probs, cumfreqs, &total);
         int sym = ad_decode(&dec, cumfreqs, total);
         result[i] = (uint8_t)sym;
 
-        tweedie_update(&twd, (uint8_t)sym);
+        tweedie_update(twd, (uint8_t)sym);
         match_update(&match, (uint8_t)sym);
         word_update(&word, (uint8_t)sym);
         highctx_update(&hctx, (uint8_t)sym);
@@ -273,6 +276,7 @@ static int do_decompress(const char *input_path, const char *output_path) {
     match_free(&match);
     word_free(&word);
     highctx_free(&hctx);
+    free(twd);
     free(compressed);
     free(result);
     return 0;
