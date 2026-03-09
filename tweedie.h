@@ -16,6 +16,10 @@
  * the additive correction δ = E[θ|p̂] - E[p̂] = hit_rate - avg_pred.
  * This δ equals σ²·s(p̂) — the full Tweedie correction term.
  *
+ * Variance-aware James-Stein shrinkage: each correction δ is shrunk toward
+ * zero based on SNR = δ²·N/var(error). When SNR < 4, the correction is
+ * attenuated proportionally, preventing noisy bucket estimates from hurting.
+ *
  * Binary tree decomposition: 256-way → 8 binary decisions (MSB to LSB).
  * Multi-step: K=3 denoising steps with independent score tables.
  * Calibration context: (step, bit_context, order, shape, confidence, prob_bin)
@@ -56,6 +60,7 @@ typedef struct {
     double sum_pred;   /* sum of predicted P(right) */
     double hits;       /* times true symbol went right */
     double total;      /* total observations */
+    double sum_sq_err; /* sum of (went_right - p_right)^2 */
 } TwdCalibEntry;
 
 typedef struct {
@@ -138,6 +143,7 @@ static inline void tweedie_init(TweedieDenoiser *td) {
                             td->table[t][b][o][s][c][p].sum_pred = center * TWD_PRIOR_WEIGHT;
                             td->table[t][b][o][s][c][p].hits     = center * TWD_PRIOR_WEIGHT;
                             td->table[t][b][o][s][c][p].total    = TWD_PRIOR_WEIGHT;
+                            td->table[t][b][o][s][c][p].sum_sq_err = TWD_PRIOR_WEIGHT * 0.25;
                         }
 }
 
@@ -214,6 +220,17 @@ static inline void tweedie_denoise(TweedieDenoiser *td, double *probs,
                 double emp_rate = e->hits / e->total;
                 double delta = emp_rate - avg_pred;
 
+                /* Variance-aware James-Stein shrinkage:
+                 * SNR = δ²·N / var(error). Shrink δ → 0 when SNR < 4. */
+                double var_err = e->sum_sq_err / e->total;
+                if (e->total > 10.0 && var_err > 1e-10) {
+                    double snr = delta * delta * e->total / var_err;
+                    double shrink = (snr > 4.0) ? 1.0 : snr / 4.0;
+                    delta *= shrink;
+                } else {
+                    delta = 0.0;
+                }
+
                 double p_right_corr = p_right + delta;
                 if (p_right_corr < 1e-8)       p_right_corr = 1e-8;
                 if (p_right_corr > 1.0 - 1e-8) p_right_corr = 1.0 - 1e-8;
@@ -269,6 +286,8 @@ static inline void tweedie_update(TweedieDenoiser *td, uint8_t true_symbol) {
             int bctx = td->cached_bctx[step][node_id];
 
             TwdCalibEntry *e = &td->table[step][bctx][og][sb][cb][pbin];
+            double err = (double)went_right - td->cached_p_right[step][node_id];
+            e->sum_sq_err += err * err;
             e->sum_pred += td->cached_p_right[step][node_id];
             e->total    += 1.0;
             if (went_right)

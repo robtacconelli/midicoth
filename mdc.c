@@ -1,6 +1,6 @@
 /*
  * Midicoth Compressor — C implementation
- * Pipeline: PPM + Tweedie Denoising + Match + Word + HighCtx
+ * Pipeline: PPM + Match + Word + HighCtx + Tweedie Denoising
  *
  * Usage:
  *   ./mdc compress   <input> <output>
@@ -96,8 +96,6 @@ static int do_compress(const char *input_path, const char *output_path) {
         double confidence;
         int order;
         ppm_predict(&ppm, probs, &confidence, &order);
-
-        tweedie_denoise(&twd, probs, order, confidence);
         clamp_normalize(probs);
 
         int match_byte;
@@ -112,6 +110,9 @@ static int do_compress(const char *input_path, const char *output_path) {
         double hctx_conf;
         if (highctx_predict(&hctx, hctx_probs, &hctx_conf))
             blend_highctx(probs, hctx_probs, hctx_conf);
+
+        tweedie_denoise(&twd, probs, order, confidence);
+        clamp_normalize(probs);
 
         probs_to_cumfreqs(probs, cumfreqs, &total);
         ae_encode(&enc, cumfreqs, byte, total);
@@ -219,8 +220,6 @@ static int do_decompress(const char *input_path, const char *output_path) {
         double confidence;
         int order;
         ppm_predict(&ppm, probs, &confidence, &order);
-
-        tweedie_denoise(&twd, probs, order, confidence);
         clamp_normalize(probs);
 
         int match_byte;
@@ -235,6 +234,9 @@ static int do_decompress(const char *input_path, const char *output_path) {
         double hctx_conf;
         if (highctx_predict(&hctx, hctx_probs, &hctx_conf))
             blend_highctx(probs, hctx_probs, hctx_conf);
+
+        tweedie_denoise(&twd, probs, order, confidence);
+        clamp_normalize(probs);
 
         probs_to_cumfreqs(probs, cumfreqs, &total);
         int sym = ad_decode(&dec, cumfreqs, total);

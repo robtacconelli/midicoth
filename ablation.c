@@ -25,7 +25,7 @@
 #define SCALE (1 << 14)
 
 /* ── Flags ── */
-#define FLAG_TWEEDIE    1
+#define FLAG_TWEEDIE    1   /* post-blend Tweedie (after match/word/highctx) */
 #define FLAG_MATCH      2
 #define FLAG_WORD       4
 #define FLAG_HIGHCTX    8
@@ -84,9 +84,6 @@ static uint8_t *do_compress(const uint8_t *data, size_t data_len,
 
         ppm_predict(&ppm, probs, &confidence, &order);
 
-        if (flags & FLAG_TWEEDIE) {
-            tweedie_denoise(&twd, probs, order, confidence);
-        }
         clamp_normalize(probs);
 
         if (flags & FLAG_MATCH) {
@@ -106,6 +103,11 @@ static uint8_t *do_compress(const uint8_t *data, size_t data_len,
             double hctx_conf;
             if (highctx_predict(&hctx, hctx_probs, &hctx_conf))
                 blend_highctx(probs, hctx_probs, hctx_conf);
+        }
+
+        if (flags & FLAG_TWEEDIE) {
+            tweedie_denoise(&twd, probs, order, confidence);
+            clamp_normalize(probs);
         }
 
         probs_to_cumfreqs(probs, cumfreqs, &total);
@@ -178,9 +180,6 @@ static uint8_t *do_decompress(const uint8_t *compressed, size_t comp_len,
 
         ppm_predict(&ppm, probs, &confidence, &order);
 
-        if (flags & FLAG_TWEEDIE) {
-            tweedie_denoise(&twd, probs, order, confidence);
-        }
         clamp_normalize(probs);
 
         if (flags & FLAG_MATCH) {
@@ -200,6 +199,11 @@ static uint8_t *do_decompress(const uint8_t *compressed, size_t comp_len,
             double hctx_conf;
             if (highctx_predict(&hctx, hctx_probs, &hctx_conf))
                 blend_highctx(probs, hctx_probs, hctx_conf);
+        }
+
+        if (flags & FLAG_TWEEDIE) {
+            tweedie_denoise(&twd, probs, order, confidence);
+            clamp_normalize(probs);
         }
 
         probs_to_cumfreqs(probs, cumfreqs, &total);
@@ -235,11 +239,11 @@ typedef struct {
 } AblationConfig;
 
 static const AblationConfig CONFIGS[] = {
-    { "Base PPM",                    0 },
-    { "+ Tweedie",                   FLAG_TWEEDIE },
-    { "+ Twd + Match",               FLAG_TWEEDIE | FLAG_MATCH },
-    { "+ Twd + Match + Word",        FLAG_TWEEDIE | FLAG_MATCH | FLAG_WORD },
-    { "+ Twd + M + W + H",           FLAG_TWEEDIE | FLAG_MATCH | FLAG_WORD | FLAG_HIGHCTX },
+    { "Base PPM",               0 },
+    { "+ Match",                FLAG_MATCH },
+    { "+ Match + Word",         FLAG_MATCH | FLAG_WORD },
+    { "+ Match + Word + HCtx",  FLAG_MATCH | FLAG_WORD | FLAG_HIGHCTX },
+    { "+ M + W + H + Tweedie",  FLAG_MATCH | FLAG_WORD | FLAG_HIGHCTX | FLAG_TWEEDIE },
 };
 #define N_CONFIGS 5
 

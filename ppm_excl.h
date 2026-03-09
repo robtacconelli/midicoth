@@ -9,7 +9,6 @@
 #define PPM_MAX_ORDER 4
 #define PPM_NSYM 256
 #define PPM_PRIOR 0.5
-#define PPM_MAX_CAPACITY (1 << 19)  /* 524288 entries per table; ~3.2 GB total for 5 tables */
 
 /*
  * Hash table entry: maps a 64-bit context hash to a count array.
@@ -78,10 +77,9 @@ static inline PPMEntry *ppm_table_find(PPMTable *t, uint64_t key) {
 }
 
 static inline PPMEntry *ppm_table_insert(PPMTable *t, uint64_t key) {
-    /* Grow if > 60% full, but respect capacity cap */
+    /* Grow if > 60% full */
     if (t->used * 5 > t->capacity * 3) {
-        if (t->capacity < PPM_MAX_CAPACITY)
-            ppm_table_grow(t);
+        ppm_table_grow(t);
     }
     uint32_t mask = t->capacity - 1;
     uint32_t idx = (uint32_t)(key & mask);
@@ -89,10 +87,6 @@ static inline PPMEntry *ppm_table_insert(PPMTable *t, uint64_t key) {
         PPMEntry *e = &t->entries[idx];
         if (e->key == key) return e;  /* already exists */
         if (e->key == 0) {
-            /* At capacity and table is full: don't insert new entry */
-            if (t->capacity >= PPM_MAX_CAPACITY &&
-                t->used * 5 > t->capacity * 3)
-                return NULL;
             /* init new entry with prior */
             e->key = key;
             for (int i = 0; i < PPM_NSYM; i++)
@@ -141,96 +135,39 @@ static inline void ppm_free(PPMModel *m) {
 }
 
 /*
- * Predict with PPMC-style exclusion.
- *
- * From highest order down, symbols observed at each order receive probability
- * proportional to their real observation count.  Symbols already assigned
- * probability at a higher order are *excluded* from lower-order distributions.
- * Escape probability (Method C):  P_esc = d / (n + d)
- *   where d = distinct observed symbols, n = total real observations.
+ * predict_with_confidence: fills probs[256] and returns confidence + order.
+ * Matches Python: fallback from max_order down to 0, first context with total > 1.
+ * If nothing found, returns uniform.
  */
 static inline void ppm_predict(PPMModel *m, double *probs,
                                 double *out_confidence, int *out_order) {
-    int excluded[PPM_NSYM];
-    memset(excluded, 0, sizeof(excluded));
-    for (int i = 0; i < PPM_NSYM; i++) probs[i] = 0.0;
-
-    double remaining = 1.0;
-    int best_order = -1;
-    double best_conf = 0.0;
-
     for (int order = PPM_MAX_ORDER; order >= 0; order--) {
+        const uint8_t *ctx_start;
         int ctx_len = order;
-        if (ctx_len > m->hist_len) continue;
 
-        const uint8_t *ctx_start = m->history + m->hist_len - ctx_len;
+        if (ctx_len > m->hist_len) continue;
+        ctx_start = m->history + m->hist_len - ctx_len;
+
         uint64_t key = ppm_hash_context(ctx_start, ctx_len);
         PPMEntry *e = ppm_table_find(&m->tables[order], key);
         if (e == NULL) continue;
+        if (e->total <= 1.0) continue;
 
-        /* Count real observations for non-excluded symbols */
-        double n = 0.0;
-        int d = 0;
-        for (int s = 0; s < PPM_NSYM; s++) {
-            if (excluded[s]) continue;
-            double real = e->counts[s] - PPM_PRIOR;
-            if (real > 0.01) {
-                n += real;
-                d++;
-            }
-        }
+        double inv_total = 1.0 / e->total;
+        for (int i = 0; i < PPM_NSYM; i++)
+            probs[i] = e->counts[i] * inv_total;
 
-        if (d == 0) continue;
-
-        if (best_order < 0) {
-            best_order = order;
-            best_conf = e->total;
-        }
-
-        /* PPMC escape: d / (n + d) */
-        double p_esc  = (double)d / (n + d);
-        double p_nesc = 1.0 - p_esc;
-
-        for (int s = 0; s < PPM_NSYM; s++) {
-            if (excluded[s]) continue;
-            double real = e->counts[s] - PPM_PRIOR;
-            if (real > 0.01) {
-                probs[s] += remaining * p_nesc * (real / n);
-                excluded[s] = 1;
-            }
-        }
-
-        remaining *= p_esc;
+        *out_confidence = e->total;
+        *out_order = order;
+        return;
     }
 
-    /* Distribute remaining mass uniformly among non-excluded symbols */
-    int n_rem = 0;
-    for (int s = 0; s < PPM_NSYM; s++)
-        if (!excluded[s]) n_rem++;
-
-    if (n_rem > 0) {
-        double per = remaining / n_rem;
-        for (int s = 0; s < PPM_NSYM; s++)
-            if (!excluded[s])
-                probs[s] += per;
-    } else {
-        double per = remaining / PPM_NSYM;
-        for (int s = 0; s < PPM_NSYM; s++)
-            probs[s] += per;
-    }
-
-    /* Ensure positive + normalize */
-    double sum = 0.0;
-    for (int i = 0; i < PPM_NSYM; i++) {
-        if (probs[i] < 1e-10) probs[i] = 1e-10;
-        sum += probs[i];
-    }
-    double inv = 1.0 / sum;
+    /* uniform fallback */
+    double u = 1.0 / 256.0;
     for (int i = 0; i < PPM_NSYM; i++)
-        probs[i] *= inv;
-
-    *out_confidence = best_conf;
-    *out_order = best_order;
+        probs[i] = u;
+    *out_confidence = 0.0;
+    *out_order = -1;
 }
 
 /*
@@ -246,7 +183,6 @@ static inline void ppm_update(PPMModel *m, uint8_t symbol) {
         uint64_t key = ppm_hash_context(ctx_start, ctx_len);
 
         PPMEntry *e = ppm_table_insert(&m->tables[order], key);
-        if (e == NULL) continue;  /* table full, skip this context */
         e->counts[symbol] += 1.0;
         e->total += 1.0;
     }
