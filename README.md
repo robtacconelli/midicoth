@@ -217,9 +217,9 @@ Midicoth occupies a unique position: better than all dictionary compressors, sim
 The full technical details are described in:
 
 > **Micro-Diffusion Compression: Binary Tree Tweedie Denoising for Online Probability Estimation**
-> Roberto Tacconelli, 2025
+> Roberto Tacconelli, 2026
 >
-> [arXiv:2603.08771](https://arxiv.org/abs/2603.08771) | [PDF](Micro_Diffusion_Compression_-_Adaptive_Temperature_Scaling_for_Online_Probability_Estimation.pdf) | [LaTeX source](Micro_Diffusion_Compression_-_Adaptive_Temperature_Scaling_for_Online_Probability_Estimation.tex)
+> [arXiv:2603.08771](https://arxiv.org/abs/2603.08771)
 
 Key references:
 - Efron, B. (2011). *Tweedie's formula and selection bias.* JASA, 106(496):1602-1614.
@@ -283,7 +283,7 @@ Copyright 2025 Roberto Tacconelli
   title={Micro-Diffusion Compression: Binary Tree Tweedie Denoising
          for Online Probability Estimation},
   author={Tacconelli, Roberto},
-  year={2025},
+  year={2026},
   eprint={2603.08771},
   archivePrefix={arXiv},
   primaryClass={cs.IT}
