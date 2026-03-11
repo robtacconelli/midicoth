@@ -24,7 +24,6 @@ Midicoth is a lossless text compressor that introduces *micro-diffusion* — a m
 |-----------|----------|--------|-------------|
 | **alice29.txt** (152 KB) | **2.119 bpb** | 2.551 bpb | **16.9%** |
 | **enwik8** (100 MB) | **1.753 bpb** | 1.989 bpb | **11.9%** |
-| **EID 2025** (334 KB) | **1.525 bpb** | 1.739 bpb | **12.3%** |
 
 Midicoth outperforms all dictionary-based compressors (gzip, zstd, xz, Brotli, bzip2) on every tested input, narrowing the gap to heavyweight context-mixing systems like PAQ and CMIX.
 
@@ -70,7 +69,7 @@ PPM models smooth their predictions with a Jeffreys prior (0.5 per symbol, 128 t
 
 ![Ablation study](charts/chart_ablation.png)
 
-With PPMC exclusion providing a strong base, the post-PPM layers collectively contribute **5.6-16.6%** additional improvement. The Tweedie denoiser is the most consistent contributor (+2.3-2.8% across all files).
+With PPMC exclusion providing a strong base, the post-PPM layers collectively contribute **5.6-11.1%** additional improvement. The Tweedie denoiser is the most consistent contributor (+2.6-2.8% across both datasets).
 
 ### Score Magnitude vs. Noise Level
 
@@ -194,7 +193,6 @@ The format is self-contained — no external dictionaries or model files needed.
 | File | Size | Ratio | Speed | bpb |
 |------|------|-------|-------|-----|
 | alice29.txt | 152 KB | 26.5% | ~42 KB/s | 2.119 |
-| EID 2025 | 334 KB | 19.1% | ~60 KB/s | 1.525 |
 | enwik8_3M | 3.0 MB | 25.0% | ~40 KB/s | 2.003 |
 | enwik8 | 100 MB | 21.9% | ~42 KB/s | 1.753 |
 
@@ -221,7 +219,7 @@ The full technical details are described in:
 > **Micro-Diffusion Compression: Binary Tree Tweedie Denoising for Online Probability Estimation**
 > Roberto Tacconelli, 2025
 >
-> [PDF](Micro_Diffusion_Compression_-_Adaptive_Temperature_Scaling_for_Online_Probability_Estimation.pdf) | [LaTeX source](Micro_Diffusion_Compression_-_Adaptive_Temperature_Scaling_for_Online_Probability_Estimation.tex)
+> [arXiv:2603.08771](https://arxiv.org/abs/2603.08771) | [PDF](Micro_Diffusion_Compression_-_Adaptive_Temperature_Scaling_for_Online_Probability_Estimation.pdf) | [LaTeX source](Micro_Diffusion_Compression_-_Adaptive_Temperature_Scaling_for_Online_Probability_Estimation.tex)
 
 Key references:
 - Efron, B. (2011). *Tweedie's formula and selection bias.* JASA, 106(496):1602-1614.
@@ -235,7 +233,6 @@ Key references:
 
 - **alice29.txt** (152,089 bytes): Canterbury Corpus - Lewis Carroll's *Alice's Adventures in Wonderland*.
 - **enwik8** (100,000,000 bytes): First 100 MB of English Wikipedia. Download from the [Large Text Compression Benchmark](http://mattmahoney.net/dc/text.html).
-- **English Indices of Deprivation 2025** (333,794 bytes): UK government report published October 2025. Out-of-distribution test data.
 
 ---
 
@@ -286,7 +283,10 @@ Copyright 2025 Roberto Tacconelli
   title={Micro-Diffusion Compression: Binary Tree Tweedie Denoising
          for Online Probability Estimation},
   author={Tacconelli, Roberto},
-  year={2025}
+  year={2025},
+  eprint={2603.08771},
+  archivePrefix={arXiv},
+  primaryClass={cs.IT}
 }
 ```
 
