@@ -271,7 +271,7 @@ x86_64-w64-mingw32-gcc -O3 -o ablation.exe ablation.c -lm -lpthread
 Apache License 2.0 - see [LICENSE](LICENSE).
 
 ```
-Copyright 2025 Roberto Tacconelli
+Copyright 2026 Roberto Tacconelli
 ```
 
 ---
@@ -279,7 +279,7 @@ Copyright 2025 Roberto Tacconelli
 ## Citation
 
 ```bibtex
-@article{tacconelli2025midicoth,
+@article{tacconelli2026midicoth,
   title={Micro-Diffusion Compression: Binary Tree Tweedie Denoising
          for Online Probability Estimation},
   author={Tacconelli, Roberto},
