@@ -1,3 +1,4 @@
+<img src="midicoth_banner.png">
 # Midicoth — Micro-Diffusion Compression
 
 **Lossless data compression via Binary Tree Tweedie Denoising**
