@@ -1,7 +1,5 @@
 <img src="midicoth_banner.png">
 
-# Midicoth — Micro-Diffusion Compression
-
 **Lossless data compression via Binary Tree Tweedie Denoising**
 
 Midicoth is a lossless text compressor that introduces *micro-diffusion* — a multi-step score-based reverse diffusion process implementing Tweedie's empirical Bayes formula — into a cascaded statistical modeling pipeline. It treats Jeffreys-prior smoothing as a shrinkage operator toward uniform and reverses it through binary tree denoising with variance-aware James-Stein shrinkage, achieving compression ratios that outperform xz, zstd, Brotli, and bzip2 on all tested inputs.
